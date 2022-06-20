@@ -168,3 +168,30 @@ END $$
 call spInsertUF("SP");
 call spInsertUF("RJ");
 call spInsertUF("RS");
+
+DELIMITER $$
+	Create procedure InsertBairro (vBairro char(200))
+BEGIN
+	INSERT INTO tbbairro (bairro) values (vBairro);
+END $$
+
+call InsertBairro("Aclimação");
+call InsertBairro("Capão Redondo");
+call InsertBairro("Pirituba");
+call InsertBairro("Liberdade");
+
+DELIMITER $$
+	Create procedure InsertProduto (vCodigoBarras BIGINT, vNome varchar(50),vValor decimal(7,2), vQtd int)
+BEGIN
+	INSERT INTO tbproduto (codigoBarras, Nome, Valor, Qtd) values (vCodigoBarras, vNome, vValor, vQtd);
+END $$
+
+call InsertProduto(12345678910111, "Rei de Papel Mache", 54.61, 120);
+call InsertProduto(12345678910112, "Bolinha de Sabão", 100.45, 120);
+call InsertProduto(12345678910113, "Carro Bate Bate", 44.00, 120);
+call InsertProduto(12345678910114, "Bola Furada", 10.00, 120);
+call InsertProduto(12345678910115, "Maçã Laranja", 99.44, 120);
+call InsertProduto(12345678910116, "Boneco do Hitler", 124.00, 200);
+call InsertProduto(12345678910117, "Farinha de Suruí", 50.00, 200);
+call InsertProduto(12345678910118, "Zelador de Cemitério", 24.50, 120);
+
