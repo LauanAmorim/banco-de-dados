@@ -142,12 +142,29 @@ insert into tbfornecedor (CNPJ, Nome, Telefone) values ('1845678937123','Francis
 
 insert into tbfornecedor (CNPJ, Nome, Telefone) values ('1945678937123','Joãozinho Chupeta','11934567804');
 
-select * from tbfornecedor;
+#select * from tbfornecedor;
 
+delimiter $$  
+create procedure spInsertcidade (vCidade varchar(200))
+begin
+	INSERT INTO tbcidade (cidade) values (vCidade);
+end $$
 
- 
+call spInsertcidade("Rio de Janeiro");
+call spInsertcidade("São Carlos");
+call spInsertcidade("Campinas");
+call spInsertcidade("Franco da Rocha");
+call spInsertcidade("Osasco");
+call spInsertcidade("Pirituba");
+call spInsertcidade("Lapa");
+call spInsertcidade("Ponta Grossa");
 
+DELIMITER $$
+	Create procedure spInsertUF (vUF char(2))
+BEGIN
+	INSERT INTO tbestado (UF) values (vUF);
+END $$
 
-
-
-# --------  AAA  --------- #
+call spInsertUF("SP");
+call spInsertUF("RJ");
+call spInsertUF("RS");
