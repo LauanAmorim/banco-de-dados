@@ -214,7 +214,7 @@ create procedure inserirEndereco(vLogradouro varchar(200), vBairro varchar(200),
 begin
 	set @cep = vCEP;
     
-	if ((select CEP from tbEndereco where CEP = @cep)) then
+	if not exists (select CEP from tbEndereco where CEP = @cep) then
     if not exists (select IdBairro from tbBairro where Bairro = vBairro) then
 		insert into tbBairro (Bairro) values (vBairro);
     end if;
@@ -225,7 +225,7 @@ begin
 		insert into tbUF (UF) values (vUF);
     end if;
     -- insert into tbEndereco values (vCEP, vLogradouro, (select IdBairro from tbBairro where Bairro = vBairro), (select IdCidade from tbCidade where Cidade = vCidade), (select IdUF from tbUF where UF = vUF));
-    insert into tbEndereco(Logradouro, CEP, IdCidade, IdUF) values (vLogradouro, (select IdBairro from tbBairro order by IdBairro desc limit 1), vCEP, (select IdCidade from tbCidade order by IdCidade desc  limit 1), (select IdUF from tbEstado order by IdUF desc limit 1));
+    insert into tbEndereco(Logradouro, IdBairro, CEP, IdCidade, IdUF) values (vLogradouro, (select IdBairro from tbBairro order by IdBairro desc limit 1), vCEP, (select IdCidade from tbCidade order by IdCidade desc  limit 1), (select IdUF from tbUf order by IdUF desc limit 1));
     -- select @logradouro, @bairro, @cidade, @uf, @cep;
     select Logradouro, Bairro, Cidade, UF, CEP from tbEndereco, tbBairro, tbCidade, tbUF;
     select * from tbEndereco;
