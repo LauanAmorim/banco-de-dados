@@ -214,7 +214,7 @@ create procedure inserirEndereco(vLogradouro varchar(200), vBairro varchar(200),
 begin
 	set @cep = vCEP;
     
-	if not exists (select CEP from tbEndereco where CEP = @cep) then
+	if ((select CEP from tbEndereco where CEP = @cep)) then
     if not exists (select IdBairro from tbBairro where Bairro = vBairro) then
 		insert into tbBairro (Bairro) values (vBairro);
     end if;
@@ -225,7 +225,7 @@ begin
 		insert into tbUF (UF) values (vUF);
     end if;
     -- insert into tbEndereco values (vCEP, vLogradouro, (select IdBairro from tbBairro where Bairro = vBairro), (select IdCidade from tbCidade where Cidade = vCidade), (select IdUF from tbUF where UF = vUF));
-    insert into tbEndereco(Logradouro, IdBairro, CEP, IdCidade, IdUF) values (vLogradouro, (select IdBairro from tbBairro order by IdBairro desc limit 1), vCEP, (select IdCidade from tbCidade order by IdCidade desc  limit 1), (select IdUF from tbUf order by IdUF desc limit 1));
+    insert into tbEndereco(Logradouro, CEP, IdCidade, IdUF) values (vLogradouro, (select IdBairro from tbBairro order by IdBairro desc limit 1), vCEP, (select IdCidade from tbCidade order by IdCidade desc  limit 1), (select IdUF from tbEstado order by IdUF desc limit 1));
     -- select @logradouro, @bairro, @cidade, @uf, @cep;
     select Logradouro, Bairro, Cidade, UF, CEP from tbEndereco, tbBairro, tbCidade, tbUF;
     select * from tbEndereco;
@@ -459,4 +459,43 @@ $$
 call spInsertNF(359, "Pimpão");
 call spInsertNF(360, "Lança Perfume");
 
-select * from tbNotaFiscal;
+# EXERCÍCIO 12
+
+DELIMITER $$
+create procedure spInsertProduto(vCodigoBarras bigint, vNome varchar(50), vValorUnit decimal(6,2), vQtd int)
+BEGIN
+if not exists (select CodBarras from tbproduto where CodBarras = vCodigoBarras) then
+		insert into tbproduto (CodBarras, Qtd, Nome, ValorUnitario) values (vCodigoBarras, vQtd, vNome, vValorUnit);
+		else
+			select "O produto já foi inserido";
+    end if;
+END
+$$
+
+call spInsertProduto(12345678910130, 'Camiseta de Poliéster', 35.61, 100);
+call spInsertProduto(12345678910131, 'Blusa Frio Moletom', 200.00, 100);
+call spInsertProduto(12345678910132, 'Vestido Decote Redondo', 144.00, 50);
+
+select * from tbproduto;
+
+# EXERCÍCIO 13 
+
+DELIMITER $$
+create procedure spDeleteProduto(vCodigoBarras bigint)
+BEGIN
+	if exists (select CodBarras from tbproduto where CodBarras = vCodigoBarras) then
+		delete from tbproduto where CodBarras = vCodigoBarras;
+		else 
+			select "O produto não existe";
+    end if;
+END
+$$
+
+call spDeleteProduto(12345678910116);
+call spDeleteProduto(12345678910117);
+
+select * from tbproduto;
+
+# EXERCÍCIO 14
+
+# EXERCÍCIO 15
