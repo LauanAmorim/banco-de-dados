@@ -1,4 +1,4 @@
-drop database dbdistribuidora;
+# drop database dbdistribuidora;
 create database dbdistribuidora;
 use dbdistribuidora;
 
@@ -213,8 +213,7 @@ delimiter $$
 create procedure inserirEndereco(vLogradouro varchar(200), vBairro varchar(200), vCidade varchar(200), vUF char(2), vCEP varchar(8))
 begin
 	set @cep = vCEP;
-    
-	if ((select CEP from tbEndereco where CEP = @cep)) then
+	if not exists (select CEP from tbEndereco where CEP = @cep) then
     if not exists (select IdBairro from tbBairro where Bairro = vBairro) then
 		insert into tbBairro (Bairro) values (vBairro);
     end if;
@@ -225,7 +224,7 @@ begin
 		insert into tbUF (UF) values (vUF);
     end if;
     -- insert into tbEndereco values (vCEP, vLogradouro, (select IdBairro from tbBairro where Bairro = vBairro), (select IdCidade from tbCidade where Cidade = vCidade), (select IdUF from tbUF where UF = vUF));
-    insert into tbEndereco(Logradouro, CEP, IdCidade, IdUF) values (vLogradouro, (select IdBairro from tbBairro order by IdBairro desc limit 1), vCEP, (select IdCidade from tbCidade order by IdCidade desc  limit 1), (select IdUF from tbEstado order by IdUF desc limit 1));
+    insert into tbEndereco(Logradouro, CEP, IdCidade, IdUF) values (vLogradouro, vCEP, (select IdCidade from tbCidade order by IdCidade desc  limit 1), (select IdUF from tbUF order by IdUF desc limit 1));
     -- select @logradouro, @bairro, @cidade, @uf, @cep;
     select Logradouro, Bairro, Cidade, UF, CEP from tbEndereco, tbBairro, tbCidade, tbUF;
     select * from tbEndereco;
@@ -234,7 +233,7 @@ begin
     end if;
 end
 $$
-
+# drop procedure inserirEndereco;
 call inserirEndereco("Rua da Federal", "Lapa", "São Paulo", "SP", "12345050");
 call inserirEndereco("Av Brasil", "Lapa", "Campinas", "SP", "12345051");
 call inserirEndereco("Rua Liberdade", "Consolação", "São Paulo", "SP", "12345052");
@@ -461,25 +460,12 @@ call spInsertNF(360, "Lança Perfume");
 
 # EXERCÍCIO 12
 
-DELIMITER $$
-create procedure spInsertProduto(vCodigoBarras bigint, vNome varchar(50), vValorUnit decimal(6,2), vQtd int)
-BEGIN
-if not exists (select CodBarras from tbproduto where CodBarras = vCodigoBarras) then
-		insert into tbproduto (CodBarras, Qtd, Nome, ValorUnitario) values (vCodigoBarras, vQtd, vNome, vValorUnit);
-		else
-			select "O produto já foi inserido";
-    end if;
-END
-$$
-
-call spInsertProduto(12345678910130, 'Camiseta de Poliéster', 35.61, 100);
-call spInsertProduto(12345678910131, 'Blusa Frio Moletom', 200.00, 100);
-call spInsertProduto(12345678910132, 'Vestido Decote Redondo', 144.00, 50);
-
-select * from tbproduto;
+call inserirProduto(12345678910130, 'Camiseta de Poliéster', 35.61, 100);
+call inserirProduto(12345678910131, 'Blusa frio moletom', 200.00, 100);
+call inserirProduto(12345678910132, 'Vestido Decote Redondo', 144.00, 50);
 
 # EXERCÍCIO 13 
-
+describe tbproduto;
 DELIMITER $$
 create procedure spDeleteProduto(vCodigoBarras bigint)
 BEGIN
@@ -494,8 +480,83 @@ $$
 call spDeleteProduto(12345678910116);
 call spDeleteProduto(12345678910117);
 
-select * from tbproduto;
+select * from tbProduto;
 
-# EXERCÍCIO 14
+# ex 14
 
-# EXERCÍCIO 15
+DELIMITER //
+create procedure spAtualizarProduto(vCodBarras bigint, vNome varchar(50), vValorUnit decimal(6,2))
+BEGIN
+	if exists (select CodBarras from tbproduto where CodBarras = vCodBarras) then
+		update tbproduto set Nome = vNome, ValorUnitario = vValorUnit where CodBarras = vCodBarras;
+        else 
+			select "Produto não existe";
+    end if;
+END;
+//
+
+# drop procedure spAtualizarProduto;
+
+call spAtualizarProduto(12345678910111, 'Rei de Papel Mache', 64.50);
+call spAtualizarProduto(12345678910112, 'Bolinha de Sabão', 120.00);
+call spAtualizarProduto(12345678910113, 'Carro Bate Bate', 64.00);
+
+
+# ex 15
+delimiter //
+CREATE PROCEDURE spMostrarProdutos(vCodBarras bigint)
+begin
+	if isnull(vCodBarras) then
+	select * from tbProduto;
+		else 
+			select * from tbProduto where CodBarras = vCodBarras;
+    end if;
+end;
+//
+
+call spMostrarProdutos(null);
+call spMostrarProdutos(12345678910113);
+# 16, 17 e 18
+create table tbProdutoHistorico like tbProduto;
+
+alter table tbProdutoHistorico add Ocorrencia varchar(20);
+alter table tbProdutoHistorico add Atualizacao datetime;
+
+ALTER TABLE tbProdutoHistorico DROP PRIMARY KEY, ADD PRIMARY KEY(CodBarras, Ocorrencia, Atualizacao);
+
+# 19
+delimiter //
+create trigger trgProdHistorico after insert on tbProduto
+	for each row
+  begin
+  insert into tbProdutoHistorico
+		set CodBarras = new.CodBarras,
+			Nome = new.Nome,
+            ValorUnitario = new.ValorUnitario,
+            qtd = new.qtd,
+            Ocorrencia = 'Novo',
+            Atualizacao = current_timestamp();
+  end;
+//
+select * from tbProdutoHistorico;
+call inserirProduto(12345678910119, 'Água mineral', 1.99, 500);
+
+# 20 
+
+delimiter //
+create trigger trgProdHistoricoUpdate before update on tbProduto
+	for each row
+  begin
+  insert into tbProdutoHistorico
+		set CodBarras = old.CodBarras,
+			Nome = old.Nome,
+            ValorUnitario = old.ValorUnitario,
+            qtd = old.qtd,
+            Ocorrencia = 'Atualizado',
+            Atualizacao = current_timestamp();
+  end;
+//
+
+call spAtualizarProduto(12345678910119, 'Água mineral', 2.99);
+
+
