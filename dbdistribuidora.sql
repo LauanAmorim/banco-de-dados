@@ -227,7 +227,7 @@ begin
 		-- insert into tbEndereco values (vCEP, vLogradouro, (select IdBairro from tbBairro where Bairro = vBairro), (select IdCidade from tbCidade where Cidade = vCidade), (select IdUF from tbUF where UF = vUF));
 		insert into tbEndereco(Logradouro, CEP, IdBairro, IdCidade, IdUF) values (vLogradouro, vCEP, (select IdBairro from tbBairro where Bairro = vBairro), (select IdCidade from tbCidade order by IdCidade desc  limit 1), (select IdUF from tbUF order by IdUF desc limit 1));
 		-- select @logradouro, @bairro, @cidade, @uf, @cep;
-		select Logradouro, Bairro, Cidade, UF, CEP from tbEndereco, tbBairro, tbCidade, tbUF;
+		# select Logradouro, Bairro, Cidade, UF, CEP from tbEndereco, tbBairro, tbCidade, tbUF;
 		select * from tbEndereco;
     else
 		select "Esse endereço já existe";
@@ -264,7 +264,7 @@ END
 $$
 
 -- Inserindo dados PF na tbCliente
-
+# drop procedure spInsertCliente
 delimiter $$
 create procedure spInsertCliente (vNome varchar(50), vNumEnd decimal(6,0), vCompEnd varchar(50), vCEP decimal(8,0), vCPF decimal(11,0), vRG decimal(8,0), vRgDig char(1), vNasc date,
 vLogradouro varchar(200), vBairro varchar(200), vCidade varchar(200), vUF char(2))
@@ -283,8 +283,8 @@ begin
 		set @IdUf = (select IdUF from tbUF where UF = vUf);
 		set @IdCidade = (select IdCidade from tbCidade where Cidade = vCidade);
         
-		insert into tbEndereco(CEP, Logradouro, IdBairro, IdCidade, IdUF) values
-																		(vCEP, vLogradouro, @IdBairro, @IdCidade, @IdUF); 
+		call inserirEndereco(vLogradouro, @IdBairro, @IdCidade, @IdUF, vCEP);
+        
 	end if;
    	if not exists (select CPF from tbClientePF where CPF = vCPF) then
 		insert into tbCliente(Nome, Cep, NumEnd, CompEnd) values
@@ -302,13 +302,13 @@ call spInsertCliente('Lança Perfume', 128, null, 12345059, 12345678914, 1234568
 call spInsertCliente('Remédio Amargo', 2485, null, 12345058, 12345678915, 12345682, 0, '2002-07-15', 'Av. Nova', 'Jardim Santa Isabel', 'Cuiabá', 'MT');
 
 -- -----------------
-
+# drop procedure spInsertClientePJ
+/*
 delimiter $$
-create procedure spInsertClientePJ (vNome varchar(50), vCNPJ numeric(14), vIE numeric(11), vCEP decimal(8,0), vLogradouro varchar(200),
-				vNumEnd decimal(6,0), vCompEnd varchar(50),
+create procedure spInsertClientePJ (vNome varchar(50), vCNPJ varchar(14), vIE varchar(11), vCEP varchar(8), vLogradouro varchar(200),
+				vNumEnd int, vCompEnd varchar(50),
 				vBairro varchar(200), vCidade varchar(200), vUF char(2))
 begin
-if not exists (select CNPJ from tbClientePJ where CNPJ = vCNPJ) then
     if not exists (select CEP from tbEndereco where CEP = vCEP) then
 		if not exists (select IdBairro from tbBairro where Bairro = vBairro) then
 			insert into tbBairro(Bairro) values (vBairro);
@@ -322,24 +322,44 @@ if not exists (select CNPJ from tbClientePJ where CNPJ = vCNPJ) then
 		set @IdBairro = (select IdBairro from tbBairro where Bairro = vBairro);
 		set @IdUf = (select IdUF from tbUF where UF = vUf);
 		set @IdCidade = (select IdCidade from tbCidade where Cidade = vCidade);
-
-		insert into tbEndereco(CEP, Logradouro, IdBairro, IdCidade, IdUF) values
-											(vCEP, vLogradouro, @IdBairro, @IdCidade, @IdUF); 
+		call inserirEndereco(vLogradouro, @IdBairro, @IdCidade, @IdUF, vCEP);
+        
 	-- ----
-		insert into tbCliente(Nome, Cep, NumEnd, CompEnd) values (vNome, vCEP, vNumEnd, vCompEnd);
-        set @IdCli = (SELECT Id FROM tbCliente ORDER BY Id DESC LIMIT 1);
+		insert into tbCliente(Nome, Cep, NumEnd, CompEnd) values
+																(vNome, vCEP, vNumEnd, vCompEnd);
+		set @IdCli = (SELECT Id FROM tbCliente ORDER BY Id DESC LIMIT 1);
 		insert into tbClientePJ(Id, CNPJ, IE) values (@idCli, vCNPJ, vIE);
-	end if;
-end if;
+		end if;
 end
 $$
+*/
 
+delimiter $$
+ create procedure spInsertClientePJ(vNomeCli varchar(50),vCNPJ varchar(14), vIE varchar(11), vCepCli varchar(8), vLogradouro varchar(200), vNumEnd int, vCompEnd varchar(50),vBairro varchar(200), vCidade varchar(200), uf char(2)) 
+ begin
+	if not exists(select * from tbEndereco where CEP = vCepCli) then
+		set @IdBairro = (select IdBairro from tbBairro where Bairro = vBairro);
+		set @IdUf = (select IdUF from tbUF where UF = vUf);
+		set @IdCidade = (select IdCidade from tbCidade where Cidade = vCidade);
+		call inserirEndereco(vLogradouro, @IdBairro, @IdCidade, @IdUF, vCepCli);
+	end if;
+		if not exists(select * from tbClientePJ where CNPJ = vCNPJ) then
+			insert into tbCliente(Nome,NumEnd,CompEnd,Cep) values (vNomeCli,vNumEnd,vCompEnd,vCepCli);
+			set @idCli = (select max(Id) from tbCliente);
+			insert into tbClientePJ(Id, CNPJ, IE) values (@IdCli, vCNPJ, vIE);
+		else
+			select "???";
+		end if;
+ end
+ $$
+drop procedure spInsertClientePj;
 call spInsertClientePJ('Paganada', 12345678912345, 98765432198, 12345051, 'Av. Brasil', 159, null, 'Lapa', 'Campinas', 'SP');
 call spInsertClientePJ('Caloteando', 12345678912346, 98765432199, 12345053, 'Av. Paulista', 69, null, 'Penha', 'Rio de Janeiro', 'RJ');
 call spInsertClientePJ('Semgrana', 12345678912347, 98765432100, 12345060, 'Rua dos Amores', 189, null, 'Sei Lá', 'Recife', 'PE');
 call spInsertClientePJ('Cemreais', 12345678912348, 98765432101, 12345060, 'Rua dos Amores', 5024, 'Sala 23', 'Sei Lá', 'Recife', 'PE');
 call spInsertClientePJ('Durango', 12345678912349, 98765432102, 12345060, 'Rua dos Amores', 1254, null, 'Sei Lá', 'Recife', 'PE');
-
+select * from tbcliente;
+select * from tbclientepj;
 /* select * from tbclientepf;
 select * from tbclientepj;
 select * from tbendereco;
@@ -406,11 +426,12 @@ begin
             -- set @DataVenda = DATE_FORMAT(current_date(), "%d-%m-%Y"); FORMATO BRASIL
             set @DataVenda = current_date();
             set @NotaFiscal = (select NF from tbNotaFiscal where NF = vNotaFiscal);
-            
+            set @qtd = (select qtd from tbProduto where CodBarras = vcodigobarras) - vQtd;
             if (select CodBarras from tbProduto where codbarras = vcodigobarras) then -- CHECA SE O PRODUTO EXISTE
 				if not exists (select NumeroVenda from tbVenda where NumeroVenda = vNumeroVenda) then -- checa se a venda já foi cadastrada
 					insert into tbvenda (NumeroVenda, IdCliente, DataVenda, TotalVenda, NotaFiscal) values (vNumeroVenda, @IdCliente, @DataVenda, vTotalVenda, vNotaFiscal);
                     insert into tbitemvenda (NumeroVenda, CodBarras, Qtd, ValorItem) values (vNumeroVenda, vCodigoBarras, vQtd, vValorItem);
+                    update tbproduto set qtd = @qtd where CodBarras = vcodigobarras;
 				else
 					select "Essa venda já foi cadastrada.";
 				end if;
@@ -518,7 +539,7 @@ begin
 end;
 //
 
-call spMostrarProdutos(0); // null
+call spMostrarProdutos(0); # null
 call spMostrarProdutos(12345678910113);
 # 16, 17 e 18
 create table tbProdutoHistorico like tbProduto;
@@ -528,6 +549,7 @@ alter table tbProdutoHistorico add Atualizacao datetime;
 
 ALTER TABLE tbProdutoHistorico DROP PRIMARY KEY, ADD PRIMARY KEY(CodBarras, Ocorrencia, Atualizacao);
 
+select * from tbproduto;
 # 19
 delimiter //
 create trigger trgProdHistorico after insert on tbProduto
@@ -544,7 +566,9 @@ create trigger trgProdHistorico after insert on tbProduto
 //
 select * from tbProdutoHistorico;
 call inserirProduto(12345678910119, 'Água mineral', 1.99, 500);
+call inserirProduto(12345678910999, 'Bota', 200.50, 200);
 
+select * from tbProdutoHistorico;
 # 20 
 
 delimiter //
@@ -562,4 +586,50 @@ create trigger trgProdHistoricoUpdate before update on tbProduto
 //
 
 call spAtualizarProduto(12345678910119, 'Água mineral', 2.99);
+call spAtualizarProduto(12345678910999, 'Bota Amarela', 200.50);
+
+select * from tbProdutoHistorico;
+describe tbproduto;
+# ex 21
+select * from tbproduto;
+
+# 22
+call spInsertVenda(4, "Disney Chaplin", 12345678910111, 64.50, 1, 64.50, null);
+
+select * from tbVenda;
+
+# 23
+
+select * from tbvenda order by NumeroVenda desc limit 1;
+
+# 24 
+
+select * from tbitemvenda order by NumeroVenda desc limit 1;
+
+# 25
+
+delimiter //
+create procedure spSelecionarCliente (vNomeCliente varchar(50))
+begin
+	if (select Id from tbCliente where Nome = vNomeCliente) then
+		select * from tbCliente where Nome = vNomeCliente;
+	else 
+		select "O cliente não existe...";
+	end if;
+end
+//
+
+call spSelecionarCliente("Disney Chaplin");
+
+# describe tbProduto;
+# call inserirProduto(12345678101199, "Boneca", 21.00, 200);
+
+# 26 
+-- spInsertVenda alterada
+
+# 27
+call spInsertVenda(5, "Paganada", 12345678910111, 64.50, 15, 64.50, null);
+
+# 28
+select * from tbProduto;
 
