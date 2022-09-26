@@ -376,11 +376,13 @@ CREATE PROCEDURE spInsertCompra(vNotaFiscal int, vFornecedor varchar(200), vData
 begin 
 if (select Codigo from tbFornecedor where Nome = vFornecedor) then
 			set @IdFornecedor = (select Codigo from tbFornecedor where Nome = vFornecedor);
+            set @qtd = (SELECT qtd from tbproduto where CodBarras = vCodigoBarras)+vQtd;
             if not exists (select NF from tbNotaFiscal where NF = vNotaFiscal) then
 				insert into tbNotaFiscal(NF, TotalNota, DataEmissao) values (vNotaFiscal, vValorTotal, vDataCompra);
                 insert into tbCompra(NotaFiscal, DataCompra, ValorTotal, QtdTotal, Cod_Fornecedor) values (vNotaFiscal, vDataCompra, vValorTotal, vQtdTotal,
 				@IdFornecedor);
                 insert into tbItemCompra(Qtd, ValorItem, NotaFiscal, CodBarras) values (vQtd, vValorItem, vNotaFiscal, vCodigoBarras);
+                update tbproduto set qtd = @qtd where CodBarras = vCodigoBarras; 
 			else
 				if not exists(select * from tbItemCompra where NotaFiscal = vNotaFiscal and CodBarras = vCodigoBarras) then
 					insert into tbItemCompra(Qtd, ValorItem, NotaFiscal, CodBarras) values (vQtd, vValorItem, vNotaFiscal, vCodigoBarras);
@@ -567,6 +569,7 @@ create trigger trgProdHistorico after insert on tbProduto
 select * from tbProdutoHistorico;
 call inserirProduto(12345678910119, 'Água mineral', 1.99, 500);
 call inserirProduto(12345678910999, 'Bota', 200.50, 200);
+call inserirProduto(12345678910124, 'Sapato', 300.00, 200);
 
 select * from tbProdutoHistorico;
 # 20 
@@ -586,7 +589,8 @@ create trigger trgProdHistoricoUpdate before update on tbProduto
 //
 
 call spAtualizarProduto(12345678910119, 'Água mineral', 2.99);
-call spAtualizarProduto(12345678910999, 'Bota Amarela', 200.50);
+call spAtualizarProduto(12345678910124, 'Sapato cor de rosa', 100.00);
+-- call spAtualizarProduto(12345678910999, 'Bota Amarela', 200.50);
 
 select * from tbProdutoHistorico;
 describe tbproduto;
@@ -633,3 +637,11 @@ call spInsertVenda(5, "Paganada", 12345678910111, 64.50, 15, 64.50, null);
 # 28
 select * from tbProduto;
 
+# 29 
+-- spInsertCompra alterada
+
+# 30
+call spInsertCompra(10548, 'Amoroso e Doce', '2022-09-10', 12345678910111, 40.00, 100, 100, 4000.00);
+
+# 31
+select * from tbproduto;
