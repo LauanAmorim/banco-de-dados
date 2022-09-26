@@ -209,31 +209,32 @@ call inserirProduto(12345678910117, 'Farinha de Suruí', 50.00, 200);
 call inserirProduto(12345678910118, 'Zelador de Cemitério', 24.50, 120);
 
 -- Inserindo endereço (EX - 6)
+# drop procedure inserirEndereco
 delimiter $$
 create procedure inserirEndereco(vLogradouro varchar(200), vBairro varchar(200), vCidade varchar(200), vUF char(2), vCEP varchar(8))
 begin
 	set @cep = vCEP;
 	if not exists (select CEP from tbEndereco where CEP = @cep) then
-    if not exists (select IdBairro from tbBairro where Bairro = vBairro) then
-		insert into tbBairro (Bairro) values (vBairro);
-    end if;
-    if not exists (select IdCidade from tbCidade where Cidade = vCidade) then
-		insert into tbCidade (Cidade) values (vCidade);
-    end if;
-    if not exists (select IdUF from tbUF where UF = vUF) then
-		insert into tbUF (UF) values (vUF);
-    end if;
-    -- insert into tbEndereco values (vCEP, vLogradouro, (select IdBairro from tbBairro where Bairro = vBairro), (select IdCidade from tbCidade where Cidade = vCidade), (select IdUF from tbUF where UF = vUF));
-    insert into tbEndereco(Logradouro, CEP, IdCidade, IdUF) values (vLogradouro, vCEP, (select IdCidade from tbCidade order by IdCidade desc  limit 1), (select IdUF from tbUF order by IdUF desc limit 1));
-    -- select @logradouro, @bairro, @cidade, @uf, @cep;
-    select Logradouro, Bairro, Cidade, UF, CEP from tbEndereco, tbBairro, tbCidade, tbUF;
-    select * from tbEndereco;
+		if not exists (select IdBairro from tbBairro where Bairro = vBairro) then
+			insert into tbBairro (Bairro) values (vBairro);
+		end if;
+		if not exists (select IdCidade from tbCidade where Cidade = vCidade) then
+			insert into tbCidade (Cidade) values (vCidade);
+		end if;
+		if not exists (select IdUF from tbUF where UF = vUF) then
+			insert into tbUF (UF) values (vUF);
+		end if;
+		-- insert into tbEndereco values (vCEP, vLogradouro, (select IdBairro from tbBairro where Bairro = vBairro), (select IdCidade from tbCidade where Cidade = vCidade), (select IdUF from tbUF where UF = vUF));
+		insert into tbEndereco(Logradouro, CEP, IdBairro, IdCidade, IdUF) values (vLogradouro, vCEP, (select IdBairro from tbBairro where Bairro = vBairro), (select IdCidade from tbCidade order by IdCidade desc  limit 1), (select IdUF from tbUF order by IdUF desc limit 1));
+		-- select @logradouro, @bairro, @cidade, @uf, @cep;
+		select Logradouro, Bairro, Cidade, UF, CEP from tbEndereco, tbBairro, tbCidade, tbUF;
+		select * from tbEndereco;
     else
 		select "Esse endereço já existe";
     end if;
 end
 $$
-# drop procedure inserirEndereco;
+
 call inserirEndereco("Rua da Federal", "Lapa", "São Paulo", "SP", "12345050");
 call inserirEndereco("Av Brasil", "Lapa", "Campinas", "SP", "12345051");
 call inserirEndereco("Rua Liberdade", "Consolação", "São Paulo", "SP", "12345052");
@@ -503,18 +504,21 @@ call spAtualizarProduto(12345678910113, 'Carro Bate Bate', 64.00);
 
 
 # ex 15
+# drop procedure spMostrarProdutos;
+
 delimiter //
 CREATE PROCEDURE spMostrarProdutos(vCodBarras bigint)
+	
 begin
-	if isnull(vCodBarras) then
-	select * from tbProduto;
-		else 
-			select * from tbProduto where CodBarras = vCodBarras;
+	if (vCodBarras is null or vCodBarras = '' or vCodBarras = 0) then
+		select * from tbProduto;
+	else 
+		select * from tbProduto where CodBarras = vCodBarras;
     end if;
 end;
 //
 
-call spMostrarProdutos(null);
+call spMostrarProdutos(0); // null
 call spMostrarProdutos(12345678910113);
 # 16, 17 e 18
 create table tbProdutoHistorico like tbProduto;
@@ -548,15 +552,14 @@ create trigger trgProdHistoricoUpdate before update on tbProduto
 	for each row
   begin
   insert into tbProdutoHistorico
-		set CodBarras = old.CodBarras,
-			Nome = old.Nome,
-            ValorUnitario = old.ValorUnitario,
-            qtd = old.qtd,
+		set CodBarras = new.CodBarras,
+			Nome = new.Nome,
+            ValorUnitario = new.ValorUnitario,
+            qtd = new.qtd,
             Ocorrencia = 'Atualizado',
             Atualizacao = current_timestamp();
   end;
 //
 
 call spAtualizarProduto(12345678910119, 'Água mineral', 2.99);
-
 
