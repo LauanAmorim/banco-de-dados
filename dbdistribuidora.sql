@@ -370,9 +370,8 @@ select * from tbcliente;
 */
 
 DELIMITER $$
-CREATE PROCEDURE spInsertCompra(vNotaFiscal int, vFornecedor varchar(200), vDataCompra date,
-                                vCodigoBarras bigint, vValorItem decimal(6,2), vQtd int, vQtdTotal int,
-                                vValorTotal decimal(8, 2))
+CREATE PROCEDURE spInsertCompra(vFornecedor varchar(200),
+                                vCodigoBarras bigint, vQtd int, vNF int) -- FAZER A INSERT COMPRA FICAR AUTOMÁTICA
 begin 
 if (select Codigo from tbFornecedor where Nome = vFornecedor) then
 			set @IdFornecedor = (select Codigo from tbFornecedor where Nome = vFornecedor);
@@ -411,13 +410,9 @@ select * from tbItemCompra;
 -- EX 10
 # drop procedure spInsertVenda;
 DELIMITER $$
-CREATE PROCEDURE spInsertVenda(	vNumeroVenda int,
-								vCliente varchar(200),
+CREATE PROCEDURE spInsertVenda(	vCliente varchar(200),
                                 vCodigoBarras bigint, 
-                                vValorItem decimal(6,2), 
-                                vQtd int,
-                                vTotalVenda decimal(8, 2), 
-                                vNotaFiscal int)
+                                vQtd int, vNF int)
 begin 
 -- NUM VENDA AUTO INCREMENT
 -- DATA VENDA (DATA ATUAL, DD / MM / YY)
@@ -427,12 +422,16 @@ begin
 			set @IdCliente = (select id from tbCliente where Nome = vCliente);
             -- set @DataVenda = DATE_FORMAT(current_date(), "%d-%m-%Y"); FORMATO BRASIL
             set @DataVenda = current_date();
-            set @NotaFiscal = (select NF from tbNotaFiscal where NF = vNotaFiscal);
             set @qtd = (select qtd from tbProduto where CodBarras = vcodigobarras) - vQtd;
+            set @ValorUnitario = (select ValorUnitario from tbProduto where CodBarras = vCodigoBarras);
+			set @TotalVenda = vQtd * @ValorUnitario;
+            
+            
             if (select CodBarras from tbProduto where codbarras = vcodigobarras) then -- CHECA SE O PRODUTO EXISTE
 				if not exists (select NumeroVenda from tbVenda where NumeroVenda = vNumeroVenda) then -- checa se a venda já foi cadastrada
-					insert into tbvenda (NumeroVenda, IdCliente, DataVenda, TotalVenda, NotaFiscal) values (vNumeroVenda, @IdCliente, @DataVenda, vTotalVenda, vNotaFiscal);
-                    insert into tbitemvenda (NumeroVenda, CodBarras, Qtd, ValorItem) values (vNumeroVenda, vCodigoBarras, vQtd, vValorItem);
+					insert into tbvenda (IdCliente, DataVenda, TotalVenda, NotaFiscal) values (@IdCliente, @DataVenda, @TotalVenda, vNF);
+                    set @NumVenda = (select NumeroVenda from tbVenda where IdCliente = @IdCliente);
+                    insert into tbitemvenda (NumeroVenda, CodBarras, Qtd, ValorItem) values (@NumVenda, vCodigoBarras, vQtd, @ValorUnitario);
                     update tbproduto set qtd = @qtd where CodBarras = vcodigobarras;
 				else
 					select "Essa venda já foi cadastrada.";
@@ -446,9 +445,9 @@ begin
         
 end $$
 
-call spInsertVenda(1, "Pimpão",12345678910111,54.61,1,54.61, null);
-call spInsertVenda(2, "Lança Perfume",12345678910112,100.45,2,200.90, null);
-call spInsertVenda(3, "Pimpão",12345678910113,44.00,1,44.00, null);  
+call spInsertVenda("Pimpão",123456789101111,1);
+call spInsertVenda("Lança Perfume",12345678910112,2);
+call spInsertVenda("Pimpão",12345678910113,1);  
 
 select * from tbVenda;
 select * from tbItemVenda;
@@ -632,7 +631,7 @@ call spSelecionarCliente("Disney Chaplin");
 -- spInsertVenda alterada
 
 # 27
-call spInsertVenda(5, "Paganada", 12345678910111, 64.50, 15, 64.50, null);
+call spInsertVenda("Paganada", 12345678910111, 15, null);
 
 # 28
 select * from tbProduto;
@@ -645,3 +644,4 @@ call spInsertCompra(10548, 'Amoroso e Doce', '2022-09-10', 12345678910111, 40.00
 
 # 31
 select * from tbproduto;
+
